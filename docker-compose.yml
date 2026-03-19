@@ -1,7 +1,7 @@
 services:
   rails:
     # Build customizado com assets recompilados
-    image: meu-chatwoot-custom:v1.12
+    image: meu-chatwoot-custom:v1.13
     container_name: chatwoot-rails
     ports:
       - "3000:3000"
@@ -68,7 +68,7 @@ services:
       retries: 10
 
   sidekiq:
-    image: meu-chatwoot-custom:v1.12
+    image: meu-chatwoot-custom:v1.13
     container_name: chatwoot-sidekiq
     volumes:
       - storage:/app/storage
