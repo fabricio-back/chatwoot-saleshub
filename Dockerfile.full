@@ -29,6 +29,7 @@ COPY ./custom/LoginIndex.vue /build/app/javascript/v3/views/login/Index.vue
 COPY ./custom/theme-colors.js /build/theme/colors.js
 # Patchar getMineChats para incluir conversas onde o usuário é participante
 COPY ./custom/conversations_getters.js /build/app/javascript/dashboard/store/modules/conversations/getters.js
+COPY ./custom/conversations_helpers.js /build/app/javascript/dashboard/store/modules/conversations/helpers.js
 # Instalar pnpm via corepack
 RUN corepack enable && \
     corepack prepare pnpm@latest --activate
