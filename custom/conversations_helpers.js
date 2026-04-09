@@ -75,42 +75,40 @@ export const applyRoleFilter = (
   conversation,
   role,
   permissions,
-  currentUserId
+  currentUserId,
+  agentCanSeeAll = false
 ) => {
-  // the role === "agent" check is typically not correct on it's own
-  // the backend handles this by checking the custom_role_id at the user model
-  // here however, the `getUserRole` returns "custom_role" if the id is present,
-  // so we can check the role === "agent" directly
+  // Administrators always see everything
   if (role === 'administrator') {
     return true;
   }
 
-  const conversationAssignee = conversation.meta.assignee;
+  const conversationAssignee = conversation.meta?.assignee;
   const isAssignedToUser = conversationAssignee?.id === currentUserId;
   const isParticipant = conversation.meta?.is_participant === true;
 
-  if (role === 'agent') {
-    return isAssignedToUser || isParticipant;
+  // If account toggle is ON, agents behave like admins for visibility
+  if (agentCanSeeAll) {
+    return true;
   }
 
-  // Check for full conversation management permission
+  // Custom role: check explicit permissions
   if (permissions.includes('conversation_manage')) {
     return true;
   }
 
   const isUnassigned = !conversationAssignee;
 
-  // Check unassigned management permission
   if (permissions.includes('conversation_unassigned_manage')) {
     return isUnassigned || isAssignedToUser;
   }
 
-  // Check participating conversation management permission
   if (permissions.includes('conversation_participating_manage')) {
     return isAssignedToUser;
   }
 
-  return false;
+  // Regular agent: only their own conversations or where they are a participant
+  return isAssignedToUser || isParticipant;
 };
 
 const SORT_OPTIONS = {

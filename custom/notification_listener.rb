@@ -17,11 +17,16 @@ class NotificationListener < BaseListener
     conversation, account = extract_conversation_and_account(event)
     return if conversation.pending?
 
-    # Only notify administrators about new conversations.
-    # Regular agents are notified via conversation_assignment when the conversation is assigned to them.
+    agent_see_all = account.custom_attributes.fetch('agent_see_all_conversations', false) == true
+
     conversation.inbox.members.each do |agent|
       account_user = account.account_users.find_by(user_id: agent.id)
-      next unless account_user&.administrator?
+      next unless account_user
+
+      # If agent_see_all is enabled, notify everyone.
+      # Otherwise only administrators — regular agents are notified via
+      # conversation_assignment when the conversation is assigned to them.
+      next unless agent_see_all || account_user.administrator?
 
       NotificationBuilder.new(
         notification_type: 'conversation_creation',

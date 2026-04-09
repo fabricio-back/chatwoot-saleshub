@@ -115,6 +115,7 @@ const advancedFilterTypes = ref(
 );
 
 const currentUser = useMapGetter('getCurrentUser');
+const currentAccount = useMapGetter('getCurrentAccount');
 const chatLists = useMapGetter('getFilteredConversations');
 const mineChatsList = useMapGetter('getMineChats');
 const allChatList = useMapGetter('getAllStatusChats');
@@ -204,10 +205,16 @@ const userPermissions = computed(() => {
   return getUserPermissions(currentUser.value, currentAccountId.value);
 });
 
-// Verifica se o usuário atual é administrador
+// Verifica se o usuário atual é administrador ou se a conta liberou visão total
 const isAdmin = computed(() => {
   return currentUser.value?.role === 'administrator';
 });
+
+const agentCanSeeAll = computed(() => {
+  return currentAccount.value?.agent_see_all_conversations === true;
+});
+
+const showAllConvItems = computed(() => isAdmin.value || agentCanSeeAll.value);
 
 const assigneeTabItems = computed(() => {
   const allTabs = filterItemsByPermission(
@@ -220,8 +227,8 @@ const assigneeTabItems = computed(() => {
     count: conversationStats.value[countKey] || 0,
   }));
   
-  // Oculta abas "All" e "Unassigned" para não-administradores
-  if (isAdmin.value) {
+  // Oculta abas "All" e "Unassigned" para não-administradores sem visão total
+  if (showAllConvItems.value) {
     return allTabs;
   }
   

@@ -27,6 +27,7 @@ const getters = {
     const currentUser = rootGetters.getCurrentUser;
     const currentUserId = rootGetters.getCurrentUser.id;
     const currentAccountId = rootGetters.getCurrentAccountId;
+    const agentCanSeeAll = rootGetters.getCurrentAccount?.agent_see_all_conversations === true;
 
     const permissions = getUserPermissions(currentUser, currentAccountId);
     const userRole = getUserRole(currentUser, currentAccountId);
@@ -41,7 +42,8 @@ const getters = {
           conversation,
           userRole,
           permissions,
-          currentUserId
+          currentUserId,
+          agentCanSeeAll
         );
 
         return matchesFilterResult && allowedForRole;
@@ -107,6 +109,7 @@ const getters = {
     const currentUser = rootGetters.getCurrentUser;
     const currentUserId = rootGetters.getCurrentUser.id;
     const currentAccountId = rootGetters.getCurrentAccountId;
+    const agentCanSeeAll = rootGetters.getCurrentAccount?.agent_see_all_conversations === true;
 
     const permissions = getUserPermissions(currentUser, currentAccountId);
     const userRole = getUserRole(currentUser, currentAccountId);
@@ -117,7 +120,8 @@ const getters = {
         conversation,
         userRole,
         permissions,
-        currentUserId
+        currentUserId,
+        agentCanSeeAll
       );
 
       return shouldFilter && allowedForRole;

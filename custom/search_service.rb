@@ -32,8 +32,11 @@ class SearchService
 
   def filter_conversations
     base = current_account.conversations.where(inbox_id: accessable_inbox_ids)
-    # Apply permission-based filtering so agents only see their own conversations
-    base = Conversations::PermissionFilterService.new(base, current_user, current_account).perform
+
+    # Apply permission-based filtering unless agent can see all conversations
+    unless account_user.administrator? || agent_see_all?
+      base = Conversations::PermissionFilterService.new(base, current_user, current_account).perform
+    end
 
     conversations_query = base
                           .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
@@ -111,14 +114,18 @@ class SearchService
   def message_base_query
     query = current_account.messages.where('created_at >= ?', 3.months.ago)
     query = query.where(inbox_id: accessable_inbox_ids) unless should_skip_inbox_filtering?
-    # Restrict messages to conversations the agent can access
-    unless account_user.administrator?
-      accessible_ids = Conversations::PermissionFilterService.new(
+    # Restrict messages to conversations the agent can access (use select for subquery, not pluck)
+    unless account_user.administrator? || agent_see_all?
+      accessible_conv_ids = Conversations::PermissionFilterService.new(
         current_account.conversations, current_user, current_account
-      ).perform.pluck(:id)
-      query = query.where(conversation_id: accessible_ids)
+      ).perform.select(:id)
+      query = query.where(conversation_id: accessible_conv_ids)
     end
     query
+  end
+
+  def agent_see_all?
+    current_account.custom_attributes.fetch('agent_see_all_conversations', false) == true
   end
 
   def apply_message_filters(query)

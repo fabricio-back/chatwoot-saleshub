@@ -119,19 +119,21 @@ class ConversationFinder
   end
 
   def mine_conversations(base = @conversations)
-    participant_ids = ConversationParticipant.where(user_id: current_user.id).pluck(:conversation_id)
-    if participant_ids.present?
-      base.assigned_to(current_user).or(base.where(id: participant_ids))
-    else
-      base.assigned_to(current_user)
-    end
+    # Use select (subquery) instead of pluck to avoid loading IDs into Ruby
+    participant_conv_ids = ConversationParticipant
+      .where(user_id: current_user.id)
+      .select(:conversation_id)
+    base.assigned_to(current_user).or(base.where(id: participant_conv_ids))
   end
 
   def filter_by_conversation_type
     case @params[:conversation_type]
     when 'mention'
-      conversation_ids = current_account.mentions.where(user: current_user).pluck(:conversation_id)
-      @conversations = @conversations.where(id: conversation_ids)
+      # Use select (subquery) to avoid plucking IDs
+      mention_conv_ids = current_account.mentions
+        .where(user: current_user)
+        .select(:conversation_id)
+      @conversations = @conversations.where(id: mention_conv_ids)
     when 'participating'
       @conversations = current_user.participating_conversations.where(account_id: current_account.id)
     when 'unattended'

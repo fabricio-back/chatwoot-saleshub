@@ -50,7 +50,10 @@ const isRTL = useMapGetter('accounts/isRTL');
 
 // Verifica se o usuário atual é administrador
 const currentUser = useMapGetter('getCurrentUser');
+const currentAccount = useMapGetter('getCurrentAccount');
 const isAdmin = computed(() => currentUser.value?.role === 'administrator');
+const agentCanSeeAll = computed(() => currentAccount.value?.agent_see_all_conversations === true);
+const showAllConvItems = computed(() => isAdmin.value || agentCanSeeAll.value);
 
 const { width: windowWidth } = useWindowSize();
 const isMobile = computed(() => windowWidth.value < 768);
@@ -244,7 +247,7 @@ const menuItems = computed(() => {
       label: t('SIDEBAR.CONVERSATIONS'),
       icon: 'i-lucide-message-circle',
       children: [
-        ...(isAdmin.value ? [{
+        ...(showAllConvItems.value ? [{
           name: 'All',
           label: t('SIDEBAR.ALL_CONVERSATIONS'),
           activeOn: ['inbox_conversation'],
@@ -256,7 +259,7 @@ const menuItems = computed(() => {
           activeOn: ['conversation_through_mentions'],
           to: accountScopedRoute('conversation_mentions'),
         },
-        ...(isAdmin.value ? [{
+        ...(showAllConvItems.value ? [{
           name: 'Unattended',
           activeOn: ['conversation_through_unattended'],
           label: t('SIDEBAR.UNATTENDED_CONVERSATIONS'),

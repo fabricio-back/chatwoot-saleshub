@@ -67,8 +67,11 @@ COPY --from=assets-builder /build/public/packs/js/sdk.js /app/public/packs/js/sd
 COPY ./custom/permission_filter_service.rb /app/app/services/conversations/permission_filter_service.rb
 COPY ./custom/conversation_finder.rb /app/app/finders/conversation_finder.rb
 COPY ./custom/_conversation.json.jbuilder /app/app/views/api/v1/conversations/partials/_conversation.json.jbuilder
+COPY ./custom/_account.json.jbuilder /app/app/views/api/v1/models/_account.json.jbuilder
+COPY ./custom/_user.json.jbuilder /app/app/views/api/v1/models/_user.json.jbuilder
 COPY ./custom/notification_listener.rb /app/app/listeners/notification_listener.rb
 COPY ./custom/search_service.rb /app/app/services/search_service.rb
+COPY ./custom/account_dashboard_patch.rb /app/config/initializers/account_dashboard_patch.rb
 
 # Inicializador de brand (corrige logo no startup, se necessário)
 COPY ./custom/saleshub_brand.rb /app/config/initializers/saleshub_brand.rb
