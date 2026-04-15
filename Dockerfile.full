@@ -47,7 +47,10 @@ RUN pnpm run build:sdk && \
 # ========================================
 # Stage 2: Imagem Final com Assets
 # ========================================
-FROM ghcr.io/fazer-ai/chatwoot:latest
+# IMPORTANTE: manter a mesma tag do clone no Stage 1 para evitar desalinhamento
+# Para atualizar o Chatwoot: troque a tag aqui E no git clone acima, revise os diffs
+# dos arquivos customizados e rebuilde com: .\build.ps1 -Version vX.X
+FROM ghcr.io/fazer-ai/chatwoot:v4.11.1-fazer-ai.37
 
 # Metadata
 LABEL maintainer="seu-email@exemplo.com"

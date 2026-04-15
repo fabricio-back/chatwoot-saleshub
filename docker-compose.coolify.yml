@@ -131,55 +131,6 @@ services:
       interval: 20s
       timeout: 20s
       retries: 10
-  kanban-backend:
-    image: 'astraonline/kanbanback:develop'
-    pull_policy: always
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      # Banco próprio do Kanban (esquema kanbancw dentro do mesmo Postgres do Chatwoot)
-      - 'DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/${POSTGRES_DB:-chatwoot_production}?schema=kanbancw'
-      # Banco do Chatwoot — usado para injetar o Dashboard Script em installation_configs
-      - 'CHATWOOT_DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/${POSTGRES_DB:-chatwoot_production}'
-      # URL pública do backend do Kanban (configure em Coolify: ex. https://kanban-api.seudominio.com)
-      - 'KANBANCW_DOMAIN=${KANBAN_BACKEND_URL}'
-      - 'CHATWOOT_DOMAIN=${FRONTEND_URL}'
-      # URL INTERNA do Chatwoot (via rede Docker) — evita chamar localhost dentro do container
-      - CHATWOOT_API_URL=http://rails:3000
-      - 'CORS_ORIGIN=${FRONTEND_URL}'
-      # Redis compartilhado com o Chatwoot
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - 'REDIS_PASSWORD=${SERVICE_PASSWORD_REDIS}'
-    restart: always
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'wget -qO- http://localhost:3000/health'
-      interval: 30s
-      timeout: 10s
-      retries: 10
-
-  kanban-frontend:
-    image: 'astraonline/kanbanfront:develop'
-    pull_policy: always
-    depends_on:
-      - kanban-backend
-    environment:
-      # URL pública do backend do Kanban (mesma que KANBAN_BACKEND_URL)
-      - 'VITE_API_URL=${KANBAN_BACKEND_URL}'
-    restart: always
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'wget -qO- http://localhost:80/nginx-health'
-      interval: 30s
-      timeout: 10s
-      retries: 10
-
   baileys-api:
     image: 'ghcr.io/fazer-ai/baileys-api:latest'
     pull_policy: always
