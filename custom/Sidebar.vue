@@ -295,7 +295,7 @@ const menuItems = computed(() => {
           children: sortedInboxes.value.map(inbox => ({
             name: `${inbox.name}-${inbox.id}`,
             label: inbox.name,
-            icon: h(ChannelIcon, { inbox, class: 'size-[12px]' }),
+            icon: h(ChannelIcon, { inbox, class: 'size-[16px]' }),
             to: accountScopedRoute('inbox_dashboard', { inbox_id: inbox.id }),
             component: leafProps =>
               h(ChannelLeaf, {
@@ -323,6 +323,30 @@ const menuItems = computed(() => {
           })),
         },
       ],
+    },
+    {
+      name: 'InternalChat',
+      label: t('SIDEBAR.INTERNAL_CHAT'),
+      icon: 'i-lucide-messages-square',
+      to: accountScopedRoute('internal_chat_home'),
+      activeOn: [
+        'internal_chat',
+        'internal_chat_home',
+        'internal_chat_channel',
+        'internal_chat_dm',
+        'internal_chat_thread',
+        'internal_chat_drafts',
+      ],
+      getterKeys: {
+        count: 'internalChat/getUnreadCount',
+      },
+    },
+    {
+      name: 'Kanban',
+      label: t('SIDEBAR.KANBAN'),
+      icon: 'i-lucide-columns-3',
+      to: accountScopedRoute('kanban_view'),
+      activeOn: ['kanban_view'],
     },
     {
       name: 'Captain',
