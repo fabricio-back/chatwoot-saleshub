@@ -15,14 +15,17 @@ if resource.custom_attributes.present?
     if resource.custom_attributes['marked_for_deletion_reason'].present?
       json.marked_for_deletion_reason resource.custom_attributes['marked_for_deletion_reason']
     end
+    json.theme_primary_color resource.custom_attributes['theme_primary_color'] if resource.custom_attributes['theme_primary_color'].present?
   end
 end
-json.domain @account.domain
-json.features @account.enabled_features
-json.id @account.id
-json.locale @account.locale
-json.name @account.name
-json.support_email @account.support_email
-json.status @account.status
-json.cache_keys @account.cache_keys
-json.agent_see_all_conversations @account.custom_attributes.fetch('agent_see_all_conversations', false) == true
+# Exposto fora do bloco custom_attributes para garantir presença mesmo quando
+# custom_attributes está vazio ou nil (hash vazio é blank? == true no Rails)
+json.agent_see_all_conversations((resource.custom_attributes || {})['agent_see_all_conversations'] == true)
+json.domain resource.domain
+json.features resource.enabled_features
+json.id resource.id
+json.locale resource.locale
+json.name resource.name
+json.support_email resource.support_email
+json.status resource.status
+json.cache_keys resource.cache_keys

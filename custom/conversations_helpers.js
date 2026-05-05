@@ -24,6 +24,7 @@ export const filterByLabel = (shouldFilter, labels, chatLabels) => {
   const isOnLabel = labels.every(label => chatLabels.includes(label));
   return labels.length ? isOnLabel && shouldFilter : shouldFilter;
 };
+
 export const filterByUnattended = (
   shouldFilter,
   conversationType,
@@ -62,15 +63,8 @@ export const applyPageFilters = (conversation, filters) => {
   return shouldFilter;
 };
 
-/**
- * Filters conversations based on user role and permissions
- *
- * @param {Object} conversation - The conversation object to check permissions for
- * @param {string} role - The user's role (administrator, agent, etc.)
- * @param {Array<string>} permissions - List of permission strings the user has
- * @param {number|string} currentUserId - The ID of the current user
- * @returns {boolean} - Whether the user has permissions to access this conversation
- */
+// v1.12 — agentes só veem conversas onde são assignee ou participantes
+// (a menos que o Super Admin ativou agentCanSeeAll para esta conta)
 export const applyRoleFilter = (
   conversation,
   role,
@@ -78,8 +72,12 @@ export const applyRoleFilter = (
   currentUserId,
   agentCanSeeAll = false
 ) => {
-  // Administrators always see everything
-  if (role === 'administrator') {
+  if (role === 'administrator') return true;
+
+  // Super Admin ativou "Agentes veem todas as conversas" para esta conta
+  if (agentCanSeeAll) return true;
+
+  if (permissions.includes('conversation_manage')) {
     return true;
   }
 
@@ -87,27 +85,6 @@ export const applyRoleFilter = (
   const isAssignedToUser = conversationAssignee?.id === currentUserId;
   const isParticipant = conversation.meta?.is_participant === true;
 
-  // If account toggle is ON, agents behave like admins for visibility
-  if (agentCanSeeAll) {
-    return true;
-  }
-
-  // Custom role: check explicit permissions
-  if (permissions.includes('conversation_manage')) {
-    return true;
-  }
-
-  const isUnassigned = !conversationAssignee;
-
-  if (permissions.includes('conversation_unassigned_manage')) {
-    return isUnassigned || isAssignedToUser;
-  }
-
-  if (permissions.includes('conversation_participating_manage')) {
-    return isAssignedToUser;
-  }
-
-  // Regular agent: only their own conversations or where they are a participant
   return isAssignedToUser || isParticipant;
 };
 
@@ -122,6 +99,7 @@ const SORT_OPTIONS = {
   waiting_since_desc: ['sortOnWaitingSince', 'desc'],
   priority_desc_created_at_asc: ['sortOnPriorityCreatedAt', 'desc'],
 };
+
 const sortAscending = (valueA, valueB) => valueA - valueB;
 const sortDescending = (valueA, valueB) => valueB - valueA;
 

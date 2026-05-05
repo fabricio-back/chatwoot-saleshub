@@ -89,11 +89,8 @@ class ConversationFinder
   end
 
   def set_inboxes
-    @inbox_ids = if params[:inbox_id]
-                   @current_user.assigned_inboxes.where(id: params[:inbox_id])
-                 else
-                   @current_user.assigned_inboxes.pluck(:id)
-                 end
+    # @inbox_ids só é usado quando params[:inbox_id] está presente (filtro por inbox específico)
+    @inbox_ids = @current_user.assigned_inboxes.where(id: params[:inbox_id]) if params[:inbox_id]
   end
 
   def set_assignee_type
@@ -137,21 +134,15 @@ class ConversationFinder
   end
 
   def mine_conversations(base = @conversations)
-    # Use select (subquery) instead of pluck to avoid loading IDs into Ruby
-    participant_conv_ids = ConversationParticipant
-      .where(user_id: current_user.id)
-      .select(:conversation_id)
-    base.assigned_to(current_user).or(base.where(id: participant_conv_ids))
+    participant_subquery = ConversationParticipant.where(user_id: current_user.id).select(:conversation_id)
+    base.assigned_to(current_user).or(base.where(id: participant_subquery))
   end
 
   def filter_by_conversation_type
     case @params[:conversation_type]
     when 'mention'
-      # Use select (subquery) to avoid plucking IDs
-      mention_conv_ids = current_account.mentions
-        .where(user: current_user)
-        .select(:conversation_id)
-      @conversations = @conversations.where(id: mention_conv_ids)
+      mention_subquery = current_account.mentions.where(user: current_user).select(:conversation_id)
+      @conversations = @conversations.where(id: mention_subquery)
     when 'participating'
       @conversations = current_user.participating_conversations.where(account_id: current_account.id)
     when 'unattended'
@@ -164,22 +155,16 @@ class ConversationFinder
     return unless params[:q]
 
     allowed_message_types = [Message.message_types[:incoming], Message.message_types[:outgoing]]
-    @conversations = conversations.joins(:messages).where('messages.content ILIKE :search', search: "%#{params[:q]}%")
-                                  .where(messages: { message_type: allowed_message_types }).includes(:messages)
+    @conversations = conversations.joins(:messages)
                                   .where('messages.content ILIKE :search', search: "%#{params[:q]}%")
                                   .where(messages: { message_type: allowed_message_types })
+                                  .includes(:messages)
   end
 
   def filter_by_status
     return if params[:status] == 'all'
 
     @conversations = @conversations.where(status: params[:status] || DEFAULT_STATUS)
-  end
-
-  def filter_by_group_type
-    return unless params[:group_type].present? && params[:group_type] != 'all'
-
-    @conversations = @conversations.where(group_type: params[:group_type])
   end
 
   def filter_by_team
@@ -199,6 +184,12 @@ class ConversationFinder
 
     @conversations = @conversations.joins(:contact_inbox)
     @conversations = @conversations.where(contact_inboxes: { source_id: params[:source_id] })
+  end
+
+  def filter_by_group_type
+    return unless params[:group_type].present? && params[:group_type] != 'all'
+
+    @conversations = @conversations.where(group_type: params[:group_type])
   end
 
   def set_count_for_all_conversations

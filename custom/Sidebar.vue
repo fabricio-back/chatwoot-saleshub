@@ -50,15 +50,19 @@ const isRTL = useMapGetter('accounts/isRTL');
 
 // Verifica se o usuário atual é administrador
 const currentUser = useMapGetter('getCurrentUser');
-const currentAccount = useMapGetter('getCurrentAccount');
 const isAdmin = computed(() => currentUser.value?.role === 'administrator');
-const agentCanSeeAll = computed(() => currentAccount.value?.agent_see_all_conversations === true);
-const showAllConvItems = computed(() => isAdmin.value || agentCanSeeAll.value);
 
 const { width: windowWidth } = useWindowSize();
 const isMobile = computed(() => windowWidth.value < 768);
 
 const accountId = useMapGetter('getCurrentAccountId');
+
+// Respeita flag agent_see_all_conversations (mesma lógica do ChatList.vue)
+const agentCanSeeAll = computed(() => {
+  const account = store.getters['accounts/getAccount'](accountId.value);
+  return account?.agent_see_all_conversations === true;
+});
+const showAllConvItems = computed(() => isAdmin.value || agentCanSeeAll.value);
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
@@ -202,7 +206,7 @@ const onComposeClose = () => {
   emitter.emit(BUS_EVENTS.NEW_CONVERSATION_MODAL, false);
 };
 
-const newReportRoutes = () => [
+const reportRoutes = [
   {
     name: 'Reports Agent',
     label: t('SIDEBAR.REPORTS_AGENT'),
@@ -228,8 +232,6 @@ const newReportRoutes = () => [
   },
 ];
 
-const reportRoutes = computed(() => newReportRoutes());
-
 const menuItems = computed(() => {
   const items = [
     {
@@ -241,6 +243,13 @@ const menuItems = computed(() => {
       getterKeys: {
         count: 'notifications/getUnreadCount',
       },
+    },
+    {
+      name: 'Kanban',
+      label: 'Kanban',
+      icon: 'i-lucide-kanban',
+      to: accountScopedRoute('kanban_view'),
+      activeOn: ['kanban_view'],
     },
     {
       name: 'Conversation',
@@ -295,7 +304,7 @@ const menuItems = computed(() => {
           children: sortedInboxes.value.map(inbox => ({
             name: `${inbox.name}-${inbox.id}`,
             label: inbox.name,
-            icon: h(ChannelIcon, { inbox, class: 'size-[16px]' }),
+            icon: h(ChannelIcon, { inbox, class: 'size-[12px]' }),
             to: accountScopedRoute('inbox_dashboard', { inbox_id: inbox.id }),
             component: leafProps =>
               h(ChannelLeaf, {
@@ -340,13 +349,6 @@ const menuItems = computed(() => {
       getterKeys: {
         count: 'internalChat/getUnreadCount',
       },
-    },
-    {
-      name: 'Kanban',
-      label: t('SIDEBAR.KANBAN'),
-      icon: 'i-lucide-columns-3',
-      to: accountScopedRoute('kanban_view'),
-      activeOn: ['kanban_view'],
     },
     {
       name: 'Captain',
@@ -514,7 +516,7 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.REPORTS_CONVERSATION'),
           to: accountScopedRoute('conversation_reports'),
         },
-        ...reportRoutes.value,
+        ...reportRoutes,
         {
           name: 'Reports CSAT',
           label: t('SIDEBAR.CSAT'),
@@ -728,13 +730,25 @@ const menuItems = computed(() => {
     },
   ];
 
-  if (dashboardApps.value.length > 0) {
+  // Filtrar DashboardApps indesejados do fazer-ai que não são usados
+  const HIDDEN_APP_NAMES = [
+    'kanban', 'conexões', 'conexoes', 'chats internos', 'chats_internos',
+    'projetos', 'chatbot flows', 'chatbot_flows', 'config extra', 'config_extra',
+    'connections', 'flows', 'conexes', 'conex',
+  ];
+  const isHiddenApp = app => {
+    const title = (app.title ?? app.name ?? '').toLowerCase();
+    return HIDDEN_APP_NAMES.some(n => title.includes(n));
+  };
+  const visibleApps = dashboardApps.value.filter(app => !isHiddenApp(app));
+
+  if (visibleApps.length > 0) {
     const settingsIndex = items.findIndex(item => item.name === 'Settings');
     items.splice(settingsIndex, 0, {
       name: 'Apps',
       label: t('SIDEBAR.APPS'),
       icon: 'i-lucide-layout-grid',
-      children: dashboardApps.value.map(app => ({
+      children: visibleApps.map(app => ({
         name: `app-${app.id}`,
         label: app.title,
         to: accountScopedRoute('dashboard_app_view', { appId: app.id }),

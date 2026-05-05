@@ -3,6 +3,10 @@
 # ========================================
 FROM node:24-alpine AS assets-builder
 
+# Force cache invalidation on every build
+ARG CACHEBUST=1
+RUN echo "Cache bust: $CACHEBUST"
+
 WORKDIR /build
 
 # Instalar dependências do sistema
@@ -17,11 +21,15 @@ RUN apk add --no-cache \
 
 # Clonar repositório Chatwoot — fixado na versão 4.12.0-fazer-ai.54
 # Para atualizar: troque a tag abaixo, verifique os diffs dos arquivos customizados e rebuilde
-RUN git clone --depth 1 --branch v4.12.0-fazer-ai.54 https://github.com/fazer-ai/chatwoot.git . || \
-    git clone --depth 1 https://github.com/fazer-ai/chatwoot.git .
+RUN echo "=== BUILD TIMESTAMP: $CACHEBUST ===" && \
+    echo "Cloning Chatwoot v4.12.0-fazer-ai.54" && \
+    git clone --depth 1 --branch v4.13.0-fazer-ai.61 https://github.com/fazer-ai/chatwoot.git . || \
+    git clone --depth 1 https://github.com/fazer-ai/chatwoot.git . && \
+    echo "Clone completed at $(date)"
 
-# Copiar customizações do frontend
-COPY ./custom/ChatList.vue /build/app/javascript/dashboard/components/ChatList.vue
+# Copiar customizações do frontend (força rebuild quando arquivos custom mudam)
+# ChatList.vue NÃO é sobrescrito: v4.12 mudou de vue-virtual-scroller para virtua/vue;
+# a versão upstream já tem groupType, permissões e virtual scroll corretos.
 COPY ./custom/Sidebar.vue /build/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 # Substituir "powered by fazer.ai" por "powered by verticegrowth.com" na login
 COPY ./custom/LoginIndex.vue /build/app/javascript/v3/views/login/Index.vue
@@ -29,28 +37,48 @@ COPY ./custom/LoginIndex.vue /build/app/javascript/v3/views/login/Index.vue
 COPY ./custom/theme-colors.js /build/theme/colors.js
 # Patchar getMineChats para incluir conversas onde o usuário é participante
 COPY ./custom/conversations_getters.js /build/app/javascript/dashboard/store/modules/conversations/getters.js
+# v1.11 — applyRoleFilter: agentes só veem conversas onde são assignee ou participantes
 COPY ./custom/conversations_helpers.js /build/app/javascript/dashboard/store/modules/conversations/helpers.js
-# Instalar pnpm via corepack
-RUN corepack enable && \
-    corepack prepare pnpm@latest --activate
+# Kanban de Etiquetas — substitui o paywall do kanban_view com implementação real
+COPY ./custom/KanbanIndex.vue /build/app/javascript/dashboard/routes/dashboard/kanban/Index.vue
+
+# -----------------------------------------------------------------------
+# Remover integrações fazer-ai indesejadas (kanban externo, conexões, etc.)
+# Neutraliza qualquer arquivo JS/TS/Vue que referencie kanban.moveisback.com.br
+# -----------------------------------------------------------------------
+RUN echo "=== CACHEBUST=$CACHEBUST - Scanning for external kanban references ===" && \
+    grep -rl "kanban\.moveisback\.com\.br" /build/app/javascript --include="*.js" --include="*.ts" --include="*.vue" 2>/dev/null || true
+RUN find /build/app/javascript -type f \( -name "*.js" -o -name "*.ts" -o -name "*.vue" \) \
+    -exec grep -l "kanban\.moveisback\.com\.br" {} \; 2>/dev/null | \
+    xargs -r sed -i \
+      -e 's|https://kanban\.moveisback\.com\.br[^"'\''`]*|http://localhost:65535|g' \
+      -e 's|http://kanban\.moveisback\.com\.br[^"'\''`]*|http://localhost:65535|g' \
+    && echo "Kanban URLs neutralizadas com CACHEBUST=$CACHEBUST" || true
+
+# Instalar pnpm via corepack (versão fixada para evitar incompatibilidade)
+RUN echo "CACHEBUST=$CACHEBUST - Setting up pnpm" && \
+    corepack enable && \
+    corepack prepare pnpm@9.15.4 --activate && \
+    pnpm --version
 
 # Instalar dependências Node
-RUN pnpm install --frozen-lockfile
+RUN echo "CACHEBUST=$CACHEBUST - Installing Node dependencies" && \
+    pnpm install --frozen-lockfile && \
+    echo "Dependencies installed at $(date)"
 
 # Build dos assets do frontend
 ENV NODE_ENV=production
 ENV RAILS_ENV=production
-# Build SDK e App (Vite)
-RUN pnpm run build:sdk && \
-    npx vite build
-
-# ========================================
+# Build SDK e App (Vite via pnpm para usar a versão correta do projeto)
+RUN echo "CACHEBUST=$CACHEBUST - Building frontend assets" && \
+    date && \
+    pnpm run build:sdk && \
+    pnpm exec vite build && \
+    echo "Build completed at $(date)" && \
+    ls -lh public/packs/ || echo "No packs directory"
 # Stage 2: Imagem Final com Assets
 # ========================================
-# IMPORTANTE: manter a mesma tag do clone no Stage 1 para evitar desalinhamento
-# Para atualizar o Chatwoot: troque a tag aqui E no git clone acima, revise os diffs
-# dos arquivos customizados e rebuilde com: .\build.ps1 -Version vX.X
-FROM ghcr.io/fazer-ai/chatwoot:v4.12.0-fazer-ai.54
+FROM ghcr.io/fazer-ai/chatwoot:v4.13.0-fazer-ai.61
 
 # Metadata
 LABEL maintainer="seu-email@exemplo.com"
@@ -70,14 +98,19 @@ COPY --from=assets-builder /build/public/packs/js/sdk.js /app/public/packs/js/sd
 COPY ./custom/permission_filter_service.rb /app/app/services/conversations/permission_filter_service.rb
 COPY ./custom/conversation_finder.rb /app/app/finders/conversation_finder.rb
 COPY ./custom/_conversation.json.jbuilder /app/app/views/api/v1/conversations/partials/_conversation.json.jbuilder
-COPY ./custom/_account.json.jbuilder /app/app/views/api/v1/models/_account.json.jbuilder
-COPY ./custom/_user.json.jbuilder /app/app/views/api/v1/models/_user.json.jbuilder
-COPY ./custom/notification_listener.rb /app/app/listeners/notification_listener.rb
-COPY ./custom/search_service.rb /app/app/services/search_service.rb
-COPY ./custom/account_dashboard_patch.rb /app/config/initializers/account_dashboard_patch.rb
 
 # Inicializador de brand (corrige logo no startup, se necessário)
 COPY ./custom/saleshub_brand.rb /app/config/initializers/saleshub_brand.rb
+# v1.12 — NotificationListener: apenas admins recebem notificação de conversa criada
+COPY ./custom/notification_listener.rb /app/app/listeners/notification_listener.rb
+# v1.13 — SearchService: aplica PermissionFilterService nas buscas
+COPY ./custom/search_service.rb /app/app/services/search_service.rb
+# Remove Dashboard Script do antigo kanban-backend (astraonline) do banco de dados
+COPY ./custom/remove_kanban_script.rb /app/config/initializers/remove_kanban_script.rb
+# Super Admin: toggle "Agentes veem todas as conversas" + campo "Cor primária do tema"
+COPY ./custom/account_dashboard_patch.rb /app/config/initializers/account_dashboard_patch.rb
+# Tema dinâmico de cores por conta — rota GET /account_theme/:account_id
+COPY ./custom/account_theme_initializer.rb /app/config/initializers/account_theme_initializer.rb
 
 # Copiar layout customizado com tema de cores
 COPY ./custom/vueapp.html.erb /app/app/views/layouts/vueapp.html.erb

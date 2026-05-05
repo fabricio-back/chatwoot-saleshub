@@ -11,21 +11,21 @@ const {
   violetDark,
 } = require('@radix-ui/colors');
 
-// SalesHub custom green theme replacing Chatwoot's default blue (woot) colors
+// MoveisBack custom red theme replacing Chatwoot's default blue (woot) colors
 export const colors = {
   woot: {
-    25: '#f0fdf4',
-    50: '#dcfce7',
-    75: '#bbf7d0',
-    100: '#86efac',
-    200: '#4ade80',
-    300: '#3bd05a',
-    400: '#2dd348',
-    500: '#23c93e',
-    600: '#1daa33',
-    700: '#1e6d05',
-    800: '#175004',
-    900: '#114f00',
+    25: '#fff5f5',
+    50: '#ffe0e0',
+    75: '#ffc5c5',
+    100: '#ff9090',
+    200: '#ff5c5c',
+    300: '#e02020',
+    400: '#c01010',
+    500: '#aa0101',
+    600: '#8f0101',
+    700: '#700101',
+    800: '#540101',
+    900: '#3b0000',
   },
   green: {
     50: greenDark.green12,
@@ -225,7 +225,7 @@ export const colors = {
     },
 
     black: '#000000',
-    brand: '#23c93e',
+    brand: '#aa0101',
     background: 'rgb(var(--background-color) / <alpha-value>)',
     'input-background': 'rgba(var(--background-input-box))',
     surface: {

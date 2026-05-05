@@ -9,23 +9,28 @@ class Conversations::PermissionFilterService
 
   def perform
     return conversations if user_role == 'administrator'
-    return conversations if agent_see_all?
+
+    # Quando o Super Admin ativou "Agentes veem todas as conversas" para esta conta
+    return conversations if account_allows_agent_see_all?
 
     accessible_conversations
   end
 
   private
 
+  def account_allows_agent_see_all?
+    (account.custom_attributes || {}).fetch('agent_see_all_conversations', false) == true
+  end
+
   def accessible_conversations
-    # Use subqueries (select, not pluck) to avoid loading IDs into Ruby memory
-    participant_conv_ids = ConversationParticipant
+    # Agentes veem conversas onde são assignee OU participante (subquery em vez de pluck)
+    participant_subquery = ConversationParticipant
       .where(user_id: user.id)
       .select(:conversation_id)
 
     scope = conversations.where(inbox: user.inboxes.where(account_id: account.id))
 
-    scope.where(assignee_id: user.id)
-         .or(scope.where(id: participant_conv_ids))
+    scope.where(assignee_id: user.id).or(scope.where(id: participant_subquery))
   end
 
   def account_user
@@ -34,10 +39,6 @@ class Conversations::PermissionFilterService
 
   def user_role
     account_user&.role
-  end
-
-  def agent_see_all?
-    account.custom_attributes.fetch('agent_see_all_conversations', false) == true
   end
 end
 

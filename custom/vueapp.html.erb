@@ -75,6 +75,88 @@
     <%= vite_javascript_tag @application_pack %>
     <link rel="stylesheet" href="/brand-assets/custom-theme.css">
     <script>
+      // Tema dinâmico por conta — lê theme_primary_color de custom_attributes
+      // via API do Chatwoot e injeta um <style> inline.
+      (function () {
+        var STYLE_ID = 'dynamic-account-theme';
+        var lastAccountId = null;
+
+        // Gera escala de cores a partir de um hex primário
+        function lighten(r, g, b, t) {
+          return [Math.round(r+(255-r)*t), Math.round(g+(255-g)*t), Math.round(b+(255-b)*t)];
+        }
+        function darken(r, g, b, t) {
+          return [Math.round(r*(1-t)), Math.round(g*(1-t)), Math.round(b*(1-t))];
+        }
+        function toHex(rgb) {
+          return '#'+rgb.map(function(c){return ('0'+Math.max(0,Math.min(255,c)).toString(16)).slice(-2);}).join('');
+        }
+        function parseHex(hex) {
+          var m = /^#([0-9a-fA-F]{6})$/.exec(hex);
+          return m ? [parseInt(m[1].slice(0,2),16),parseInt(m[1].slice(2,4),16),parseInt(m[1].slice(4,6),16)] : null;
+        }
+
+        function injectCSS(primary) {
+          var rgb = parseHex(primary);
+          if (!rgb) return;
+          var r=rgb[0], g=rgb[1], b=rgb[2];
+          var s = {
+            200: toHex(lighten(r,g,b,.4)),
+            500: primary,
+            600: toHex(darken(r,g,b,.10)),
+            700: toHex(darken(r,g,b,.28)),
+            900: toHex(darken(r,g,b,.62))
+          };
+          var css = [
+            ':root{--color-woot:'+s[500]+';--color-woot-medium:'+s[700]+';--color-woot-dark:'+s[900]+';--theme-color:'+s[500]+';--w-500:'+s[500]+';--w-600:'+s[600]+';--w-700:'+s[700]+'}',
+            '[class*="bg-woot-500"],[class*="bg-woot-600"],.button.nice.success,.button.primary{background-color:'+s[500]+'!important;border-color:'+s[500]+'!important}',
+            '[class*="bg-woot-700"],[class*="bg-woot-800"]{background-color:'+s[700]+'!important;border-color:'+s[700]+'!important}',
+            '[class*="text-woot-500"],[class*="text-woot-600"]{color:'+s[500]+'!important}',
+            '[class*="text-woot-700"],[class*="text-woot-800"],[class*="text-woot-900"]{color:'+s[700]+'!important}',
+            '[class*="border-woot-500"],[class*="border-woot-600"]{border-color:'+s[500]+'!important}',
+            '[class*="border-b-woot"],.active-tab{border-color:'+s[500]+'!important;color:'+s[500]+'!important}',
+            'input[type="checkbox"]:checked,input[type="radio"]:checked{accent-color:'+s[500]+'}',
+            '::-webkit-scrollbar-thumb{background-color:'+s[200]+'} ::-webkit-scrollbar-thumb:hover{background-color:'+s[500]+'}'
+          ].join('\n');
+          var el = document.getElementById(STYLE_ID);
+          if (!el) { el = document.createElement('style'); el.id = STYLE_ID; document.head.appendChild(el); }
+          el.textContent = css;
+        }
+
+        function loadTheme(accountId) {
+          fetch('/api/v1/accounts/'+accountId, { credentials: 'include' })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(data){
+              var color = data && data.custom_attributes && data.custom_attributes.theme_primary_color;
+              if (color) injectCSS(color);
+            })
+            .catch(function(){});
+        }
+
+        function detectAndApply() {
+          var m = window.location.pathname.match(/\/accounts\/(\d+)/);
+          if (!m) return;
+          var id = m[1];
+          if (id === lastAccountId) return;
+          lastAccountId = id;
+          loadTheme(id);
+        }
+
+        // Patch SPA navigation
+        ['pushState','replaceState'].forEach(function(type){
+          var orig = history[type];
+          history[type] = function(){
+            orig.apply(this, arguments);
+            setTimeout(detectAndApply, 200);
+          };
+        });
+        window.addEventListener('popstate', function(){ setTimeout(detectAndApply, 200); });
+
+        // Rodar após 1s (espera sessão + dados da conta carregarem)
+        setTimeout(detectAndApply, 1000);
+      })();
+    </script>
+    <script>
       // Evita duplicação dos itens de menu injetados pelo KanbanCW.
       // O script do KanbanCW usa um flag em memória (menuItemsAdded) que não
       // resiste a re-renders parciais do Vue. Este observer limpa duplicatas
@@ -98,7 +180,11 @@
             }
           });
         }
-        var observer = new MutationObserver(removeDuplicateMenuItems);
+        var debounceTimer = null;
+        var observer = new MutationObserver(function () {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(removeDuplicateMenuItems, 200);
+        });
         document.addEventListener('DOMContentLoaded', function () {
           observer.observe(document.body, { childList: true, subtree: true });
         });
@@ -109,8 +195,9 @@
     <div id="app"></div>
     <noscript id="noscript">This app works best with JavaScript enabled.</noscript>
     <%= yield %>
-    <% if @dashboard_scripts.present? %>
-      <%= @dashboard_scripts.html_safe %>
-    <% end %>
+    <%# Desabilitado: @dashboard_scripts do fazer-ai injetava menus indesejados %>
+    <%# if @dashboard_scripts.present? %>
+      <%#= @dashboard_scripts.html_safe %>
+    <%# end %>
   </body>
 </html>

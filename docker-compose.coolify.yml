@@ -27,6 +27,7 @@ services:
       - 'BAILEYS_PROVIDER_DEFAULT_URL=http://baileys-api:3025'
       - 'BAILEYS_PROVIDER_DEFAULT_API_KEY=${SERVICE_PASSWORD_64_DEFAULTAPIKEY}'
       - BAILEYS_PROVIDER_USE_INTERNAL_HOST_URL=true
+      - BAILEYS_WHATSAPP_GROUPS_ENABLED=true
       - 'MAILER_SENDER_EMAIL=${MAILER_SENDER_EMAIL}'
       - 'RESEND_API_KEY=${RESEND_API_KEY}'
       - 'BRAND_ASSETS_URL=${BRAND_ASSETS_URL}'
@@ -46,7 +47,7 @@ services:
         command:
           - sh
           - '-c'
-          - 'bundle exec rails db:chatwoot_prepare && bundle exec rails branding:update && if [ -n "$${BRAND_ASSETS_URL}" ]; then deployment/extract_brand_assets.sh "$${BRAND_ASSETS_URL}"; fi'
+          - 'bundle exec rails db:chatwoot_prepare && bundle exec rails runner "begin; DashboardApp.where(\"title LIKE ? OR title LIKE ? OR title LIKE ? OR title LIKE ? OR title LIKE ? OR content LIKE ?\", \"%Conex%\", \"%Projetos%\", \"%Chatbot%\", \"%Config Extra%\", \"%Chats Internos%\", \"%kanban%\").destroy_all; puts \"[CleanApps] DashboardApps removidos\"; rescue => e; puts \"[CleanApps] #{e.message}\"; end" && bundle exec rails branding:update && if [ -n "$${BRAND_ASSETS_URL}" ]; then deployment/extract_brand_assets.sh "$${BRAND_ASSETS_URL}"; fi'
     healthcheck:
       test:
         - CMD-SHELL
@@ -81,8 +82,10 @@ services:
       - 'BAILEYS_PROVIDER_DEFAULT_URL=http://baileys-api:3025'
       - 'BAILEYS_PROVIDER_DEFAULT_API_KEY=${SERVICE_PASSWORD_64_DEFAULTAPIKEY}'
       - BAILEYS_PROVIDER_USE_INTERNAL_HOST_URL=true
+      - BAILEYS_WHATSAPP_GROUPS_ENABLED=true
       - 'MAILER_SENDER_EMAIL=${MAILER_SENDER_EMAIL}'
       - 'RESEND_API_KEY=${RESEND_API_KEY}'
+      - SIDEKIQ_CONCURRENCY=25
     command:
       - bundle
       - exec
@@ -160,3 +163,4 @@ volumes:
   storage:
   postgres:
   redis:
+
