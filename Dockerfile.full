@@ -111,6 +111,8 @@ COPY ./custom/remove_kanban_script.rb /app/config/initializers/remove_kanban_scr
 COPY ./custom/account_dashboard_patch.rb /app/config/initializers/account_dashboard_patch.rb
 # Tema dinâmico de cores por conta — rota GET /account_theme/:account_id
 COPY ./custom/account_theme_initializer.rb /app/config/initializers/account_theme_initializer.rb
+# Security: restringe agentes de ver conversas de outros no perfil do contato
+COPY ./custom/contact_conversations_filter.rb /app/config/initializers/contact_conversations_filter.rb
 
 # Copiar layout customizado com tema de cores
 COPY ./custom/vueapp.html.erb /app/app/views/layouts/vueapp.html.erb
