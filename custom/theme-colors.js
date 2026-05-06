@@ -11,21 +11,21 @@ const {
   violetDark,
 } = require('@radix-ui/colors');
 
-// MoveisBack custom red theme replacing Chatwoot's default blue (woot) colors
+// Vale Verde custom green theme replacing Chatwoot's default blue (woot) colors
 export const colors = {
   woot: {
-    25: '#fff5f5',
-    50: '#ffe0e0',
-    75: '#ffc5c5',
-    100: '#ff9090',
-    200: '#ff5c5c',
-    300: '#e02020',
-    400: '#c01010',
-    500: '#aa0101',
-    600: '#8f0101',
-    700: '#700101',
-    800: '#540101',
-    900: '#3b0000',
+    25: '#f0fdf2',
+    50: '#e8fbed',
+    75: '#d2f7da',
+    100: '#b3f0be',
+    200: '#86e69a',
+    300: '#53d96d',
+    400: '#33d450',
+    500: '#23c93e',
+    600: '#1eb035',
+    700: '#1e6d05',
+    800: '#165204',
+    900: '#114f00',
   },
   green: {
     50: greenDark.green12,
