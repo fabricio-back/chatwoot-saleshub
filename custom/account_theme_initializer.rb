@@ -72,8 +72,10 @@ end
 # ------------------------------------------------------------------
 # Controller (definido inline — sem arquivo separado)
 # ------------------------------------------------------------------
+# Usa ActionController::API para evitar NameError: uninitialized constant Api
+# que ocorre com ActionController::Base em initializers (helper resolution prematura)
 begin
-class AccountThemeController < ActionController::Base
+class AccountThemeController < ActionController::API
   # Tempo de cache do CSS no browser (1 hora). O script no frontend
   # invalida por query string ao trocar de conta.
   CACHE_TTL = 1.hour
