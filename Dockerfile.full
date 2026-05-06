@@ -23,7 +23,7 @@ RUN apk add --no-cache \
 # Para atualizar: troque a tag abaixo, verifique os diffs dos arquivos customizados e rebuilde
 RUN echo "=== BUILD TIMESTAMP: $CACHEBUST ===" && \
     echo "Cloning Chatwoot v4.12.0-fazer-ai.54" && \
-    git clone --depth 1 --branch v4.13.0-fazer-ai.61 https://github.com/fazer-ai/chatwoot.git . || \
+    git clone --depth 1 --branch v4.13.0-fazer-ai.64 https://github.com/fazer-ai/chatwoot.git . || \
     git clone --depth 1 https://github.com/fazer-ai/chatwoot.git . && \
     echo "Clone completed at $(date)"
 
@@ -78,7 +78,7 @@ RUN echo "CACHEBUST=$CACHEBUST - Building frontend assets" && \
     ls -lh public/packs/ || echo "No packs directory"
 # Stage 2: Imagem Final com Assets
 # ========================================
-FROM ghcr.io/fazer-ai/chatwoot:v4.13.0-fazer-ai.61
+FROM ghcr.io/fazer-ai/chatwoot:v4.13.0-fazer-ai.64
 
 # Metadata
 LABEL maintainer="seu-email@exemplo.com"
