@@ -54,10 +54,41 @@ const loadPersisted = () => {
     const savedNotes = localStorage.getItem(storageKey('notes'));
     if (savedNotes) notes.value = JSON.parse(savedNotes);
   } catch { /* ignore */ }
+  // Carrega ordem do servidor em background (sobrescreve localStorage se diferente)
+  loadOrderFromServer();
+};
+
+// --- Server persistence for column order (per user, syncs across devices) ---
+let _saveOrderTimer = null;
+const saveOrderToServer = async () => {
+  try {
+    await axios.put('/api/v1/profile', {
+      custom_attributes: { kanban_column_order: columnOrder.value },
+    });
+  } catch { /* silent — falls back to localStorage */ }
+};
+const loadOrderFromServer = async () => {
+  try {
+    const res = await axios.get('/api/v1/profile');
+    const serverOrder = res.data?.custom_attributes?.kanban_column_order;
+    if (Array.isArray(serverOrder) && serverOrder.length > 0) {
+      // Preserva labels locais que o servidor não conhece ainda
+      const serverSet = new Set(serverOrder);
+      const localRemainder = columnOrder.value.filter(t => !serverSet.has(t));
+      const merged = [...serverOrder, ...localRemainder];
+      if (merged.length > 0) {
+        columnOrder.value = merged;
+        try { localStorage.setItem(storageKey('order'), JSON.stringify(merged)); } catch { /**/ }
+      }
+    }
+  } catch { /* silent */ }
 };
 
 const saveOrder = () => {
   try { localStorage.setItem(storageKey('order'), JSON.stringify(columnOrder.value)); } catch { /**/ }
+  // Debounce: salva no servidor 1s após última mudança
+  clearTimeout(_saveOrderTimer);
+  _saveOrderTimer = setTimeout(saveOrderToServer, 1000);
 };
 const saveHidden = () => {
   try { localStorage.setItem(storageKey('hidden'), JSON.stringify([...hiddenColumns.value])); } catch { /**/ }
@@ -482,9 +513,14 @@ const buildLabelTimeline = (msgs, labelList = []) => {
   for (const ev of events) {
     if (ev.type === 'added' && !active[ev.label]) {
       active[ev.label] = ev.ts;
-    } else if (ev.type === 'removed' && active[ev.label]) {
-      timeline.push({ label: ev.label, startTs: active[ev.label], endTs: ev.ts, active: false });
-      delete active[ev.label];
+    } else if (ev.type === 'removed') {
+      if (active[ev.label]) {
+        timeline.push({ label: ev.label, startTs: active[ev.label], endTs: ev.ts, active: false });
+        delete active[ev.label];
+      } else {
+        // Etiqueta removida sem evento de adição explícito (ex: label inicial da conversa)
+        timeline.push({ label: ev.label, startTs: null, endTs: ev.ts, active: false });
+      }
     }
   }
   // Etiquetas ainda ativas (não removidas)
@@ -897,7 +933,7 @@ const currentHistory = computed(() => historyData.value[historyConvId.value] || 
                   class="text-xs font-semibold flex-shrink-0"
                   :class="item.active ? 'text-[var(--color-woot-500)]' : 'text-n-slate-11'"
                 >
-                  {{ fmtDuration(item.endTs ? item.endTs - item.startTs : Math.floor(Date.now() / 1000) - item.startTs) }}
+                  {{ item.startTs !== null ? fmtDuration(item.endTs ? item.endTs - item.startTs : Math.floor(Date.now() / 1000) - item.startTs) : '—' }}
                 </span>
                 <!-- Badge ativo ou data de saída -->
                 <span
@@ -1044,7 +1080,7 @@ const currentHistory = computed(() => historyData.value[historyConvId.value] || 
                       class="text-xs font-semibold"
                       :class="item.active ? 'text-[var(--color-woot-500)]' : 'text-n-slate-11'"
                     >
-                      {{ fmtDuration(item.endTs ? item.endTs - item.startTs : Math.floor(Date.now() / 1000) - item.startTs) }}
+                      {{ item.startTs !== null ? fmtDuration(item.endTs ? item.endTs - item.startTs : Math.floor(Date.now() / 1000) - item.startTs) : '—' }}
                     </span>
                     <!-- Badge ativo -->
                     <span
