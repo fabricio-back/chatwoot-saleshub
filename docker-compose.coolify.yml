@@ -31,6 +31,7 @@ services:
       - 'MAILER_SENDER_EMAIL=${MAILER_SENDER_EMAIL}'
       - 'RESEND_API_KEY=${RESEND_API_KEY}'
       - 'BRAND_ASSETS_URL=${BRAND_ASSETS_URL}'
+      - ATTACHMENT_FILE_MAX_UPLOAD_SIZE=200
     entrypoint: docker/entrypoints/rails.sh
     command:
       - bundle
