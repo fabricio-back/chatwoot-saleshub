@@ -3,11 +3,9 @@ import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { DirectUpload } from 'activestorage';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
-import {
-  DEFAULT_MAXIMUM_FILE_UPLOAD_SIZE,
-  resolveMaximumFileUploadSize,
-} from 'shared/helpers/FileHelper';
-import { INBOX_TYPES } from 'dashboard/helper/inbox';
+
+// Limite máximo de upload customizado (ignora limite por canal e valor padrão do globalConfig)
+const CUSTOM_MAX_UPLOAD_SIZE_MB = 200;
 
 /**
  * Composable for handling file uploads in conversations
@@ -28,12 +26,8 @@ export const useFileUpload = ({ inbox, attachFile, isPrivateNote = false }) => {
   const currentChat = useMapGetter('getSelectedChat');
   const globalConfig = useMapGetter('globalConfig/get');
 
-  const installationLimit = resolveMaximumFileUploadSize(
-    globalConfig.value?.maximumFileUploadSize
-  );
-
-  // Sempre usa o limite de instalação — ignora restrições por canal (ex: 16 MB WhatsApp)
-  const maxSizeFor = () => installationLimit;
+  // Sempre retorna 200 MB — ignora limites por canal (ex: 16 MB WhatsApp)
+  const maxSizeFor = () => CUSTOM_MAX_UPLOAD_SIZE_MB;
 
   const alertOverLimit = maxSizeMB =>
     useAlert(

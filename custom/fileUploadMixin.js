@@ -2,9 +2,9 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { DirectUpload } from 'activestorage';
-import {
-  resolveMaximumFileUploadSize,
-} from 'shared/helpers/FileHelper';
+
+// Limite máximo de upload customizado (ignora limite por canal e valor padrão do globalConfig)
+const CUSTOM_MAX_UPLOAD_SIZE_MB = 200;
 
 /**
  * CUSTOMIZAÇÃO: removido Math.min(channelLimit, installationLimit) para que o limite
@@ -16,17 +16,11 @@ export default {
     ...mapGetters({
       accountId: 'getCurrentAccountId',
     }),
-    installationLimit() {
-      return resolveMaximumFileUploadSize(
-        this.globalConfig.maximumFileUploadSize
-      );
-    },
   },
 
   methods: {
     maxSizeFor(_mime) {
-      // Sempre usa o limite de instalação — ignora restrições por canal
-      return this.installationLimit;
+      return CUSTOM_MAX_UPLOAD_SIZE_MB;
     },
     alertOverLimit(maxSizeMB) {
       useAlert(
