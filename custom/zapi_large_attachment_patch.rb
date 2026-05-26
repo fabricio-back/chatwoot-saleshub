@@ -10,27 +10,29 @@
 # Resultado: sem limite de tamanho no lado do Chatwoot — o Z-API baixa o arquivo
 # a partir da URL pública gerada pelo Active Storage.
 
-Whatsapp::Providers::WhatsappZapiService.class_eval do
-  private
+Rails.application.config.after_initialize do
+  Whatsapp::Providers::WhatsappZapiService.class_eval do
+    private
 
-  def handle_message_with_attachment(message, phone, **params)
-    attachment = message.attachments.first
+    def handle_message_with_attachment(message, phone, **params)
+      attachment = message.attachments.first
 
-    # Gera URL pública com assinatura temporária (Active Storage).
-    # Usa FRONTEND_URL como host base (configurado via env var).
-    file_url = attachment.download_url
+      # Gera URL pública com assinatura temporária (Active Storage).
+      # Usa FRONTEND_URL como host base (configurado via env var).
+      file_url = attachment.download_url
 
-    case attachment.file_type
-    when 'image'
-      send_image_message(phone, message, file_url, **params)
-    when 'audio'
-      send_audio_message(phone, message, file_url, **params)
-    when 'file'
-      send_document_message(phone, message, attachment, file_url, **params)
-    when 'video'
-      send_video_message(phone, message, file_url, **params)
-    else
-      send_document_message(phone, message, attachment, file_url, **params)
+      case attachment.file_type
+      when 'image'
+        send_image_message(phone, message, file_url, **params)
+      when 'audio'
+        send_audio_message(phone, message, file_url, **params)
+      when 'file'
+        send_document_message(phone, message, attachment, file_url, **params)
+      when 'video'
+        send_video_message(phone, message, file_url, **params)
+      else
+        send_document_message(phone, message, attachment, file_url, **params)
+      end
     end
   end
 end
