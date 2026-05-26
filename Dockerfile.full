@@ -41,6 +41,8 @@ COPY ./custom/conversations_getters.js /build/app/javascript/dashboard/store/mod
 COPY ./custom/conversations_helpers.js /build/app/javascript/dashboard/store/modules/conversations/helpers.js
 # Kanban de Etiquetas — substitui o paywall do kanban_view com implementação real
 COPY ./custom/KanbanIndex.vue /build/app/javascript/dashboard/routes/dashboard/kanban/Index.vue
+# Remover limite de 16 MB por canal (WhatsApp) — usa apenas o limite do servidor (200 MB)
+COPY ./custom/useFileUpload.js /build/app/javascript/dashboard/composables/useFileUpload.js
 
 # -----------------------------------------------------------------------
 # Remover integrações fazer-ai indesejadas (kanban externo, conexões, etc.)
