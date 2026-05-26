@@ -115,6 +115,8 @@ COPY ./custom/account_dashboard_patch.rb /app/config/initializers/account_dashbo
 COPY ./custom/account_theme_initializer.rb /app/config/initializers/account_theme_initializer.rb
 # Security: restringe agentes de ver conversas de outros no perfil do contato
 COPY ./custom/contact_conversations_filter.rb /app/config/initializers/contact_conversations_filter.rb
+# Remove agente anterior dos participantes ao trocar o assignee
+COPY ./custom/remove_prev_assignee_from_participants.rb /app/config/initializers/remove_prev_assignee_from_participants.rb
 
 # Copiar layout customizado com tema de cores
 COPY ./custom/vueapp.html.erb /app/app/views/layouts/vueapp.html.erb
