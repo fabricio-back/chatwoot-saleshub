@@ -122,6 +122,8 @@ COPY ./custom/account_theme_initializer.rb /app/config/initializers/account_them
 COPY ./custom/contact_conversations_filter.rb /app/config/initializers/contact_conversations_filter.rb
 # Remove agente anterior dos participantes ao trocar o assignee
 COPY ./custom/remove_prev_assignee_from_participants.rb /app/config/initializers/remove_prev_assignee_from_participants.rb
+# Envia attachments Z-API via URL pública (remove limite de 5/16 MB e evita base64 em memória)
+COPY ./custom/zapi_large_attachment_patch.rb /app/config/initializers/zapi_large_attachment_patch.rb
 
 # Copiar layout customizado com tema de cores
 COPY ./custom/vueapp.html.erb /app/app/views/layouts/vueapp.html.erb
