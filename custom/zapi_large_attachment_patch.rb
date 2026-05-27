@@ -27,17 +27,21 @@ Rails.application.config.after_initialize do
     def handle_message_with_attachment(message, phone, **params)
       attachment = message.attachments.first
 
-      # Limite total: Z-API aceita até 100 MB para vídeo/áudio/imagem/documento
-      if attachment.file.byte_size > 100.megabytes
-        mb = (attachment.file.byte_size / 1.megabyte.to_f).round(1)
+      blob    = attachment.file.blob
+      size_mb = (blob.byte_size / 1.megabyte.to_f).round(1)
+
+      # Para vídeo: FFmpeg transcodifica antes de enviar — aceita até 500 MB
+      # (153 MB H.265 iPhone → ~20-35 MB H.264 720p após transcode)
+      # Para outros tipos: enviados como URL direta ao Z-API — limite de 100 MB
+      max_mb = attachment.file_type == 'video' ? 500 : 100
+
+      if blob.byte_size > max_mb.megabytes
         message.update!(status: :failed,
-                        external_error: "Arquivo muito grande (#{mb} MB, máx 100 MB para WhatsApp)")
+                        external_error: "Arquivo muito grande (#{size_mb} MB, máx #{max_mb} MB para WhatsApp)")
         return
       end
 
-      blob        = attachment.file.blob
-      file_url    = zapi_permanent_url(blob)
-      size_mb     = (blob.byte_size / 1.megabyte.to_f).round(1)
+      file_url = zapi_permanent_url(blob)
 
       Rails.logger.info "[ZapiPatch] Processing #{attachment.file_type} (#{size_mb} MB) " \
                         "for message #{message.id}"
