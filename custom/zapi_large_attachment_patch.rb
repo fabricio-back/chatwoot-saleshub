@@ -17,21 +17,26 @@ Rails.application.config.after_initialize do
     def handle_message_with_attachment(message, phone, **params)
       attachment = message.attachments.first
 
-      # Gera URL pública com assinatura temporária (Active Storage).
-      # Usa FRONTEND_URL como host base (configurado via env var).
-      file_url = attachment.download_url
+      # Z-API hard limit: 100 MB para vídeo/áudio/documentos
+      if attachment.file.byte_size > 100.megabytes
+        message.update!(status: :failed, external_error: 'File too large (max 100MB for Z-API)')
+        return
+      end
+
+      base64_data = attachment_to_base64(attachment)
+      buffer = "data:#{attachment.file.content_type};base64,#{base64_data}"
 
       case attachment.file_type
       when 'image'
-        send_image_message(phone, message, file_url, **params)
+        send_image_message(phone, message, buffer, **params)
       when 'audio'
-        send_audio_message(phone, message, file_url, **params)
+        send_audio_message(phone, message, buffer, **params)
       when 'file'
-        send_document_message(phone, message, attachment, file_url, **params)
+        send_document_message(phone, message, attachment, buffer, **params)
       when 'video'
-        send_video_message(phone, message, file_url, **params)
+        send_video_message(phone, message, buffer, **params)
       else
-        send_document_message(phone, message, attachment, file_url, **params)
+        send_document_message(phone, message, attachment, buffer, **params)
       end
     end
   end
