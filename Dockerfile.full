@@ -89,6 +89,10 @@ LABEL maintainer="seu-email@exemplo.com"
 LABEL description="Chatwoot Custom - Build completo com assets recompilados"
 LABEL version="1.5.0"
 
+# FFmpeg para transcodificação de vídeo (H.265→H.264, resize 720p) antes de enviar ao Z-API
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 # Limpar assets Vite antigos e substituir pelos customizados
 RUN rm -rf /app/public/vite/*
 
